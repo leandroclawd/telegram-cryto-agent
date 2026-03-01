@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 from config import TELEGRAM_TOKEN
 from ai_service import analisar_mensagem
-
+from keep_alive import keep_alive
 # Configuração de pradrão de logs
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -84,6 +84,9 @@ if __name__ == '__main__':
     # Inicializa o bot
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     
+    # Inicia o servidor web falso para manter o bot online no Render (Plano Free)
+    keep_alive()
+
     # Registra os handlers (comandos e mensagens)
     start_handler = CommandHandler('start', start)
     message_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message)
