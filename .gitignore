@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+
+# Arquivos gerados/temporários
+chart*.png
+output.txt
+temp_eth.txt
+error_ai.txt
