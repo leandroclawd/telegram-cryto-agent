@@ -111,8 +111,52 @@ def get_crypto_data(coin_ids_csv: str) -> str:
             
         return contexto_precos
     except Exception as e:
-        logging.error(f"Erro ao buscar dados do CoinGecko na Tool: {e}")
-        return "Ocorreu um erro no CoinGecko, informe ao usuário que os dados ao vivo estao indisponiveis no momento."
+        logging.warning(f"Erro ao buscar dados do CoinGecko na Tool: {e}. Tentando fallback CryptoCompare...")
+        try:
+            # Fallback CryptoCompare
+            cc_ids = [c.upper() for c in raw_ids if c]
+            if not cc_ids:
+                return "Erro: Nenhum ID válido para busca."
+                
+            cc_ids_csv = ",".join(cc_ids)
+            url_cc = f"https://min-api.cryptocompare.com/data/pricemultifull?fsyms={cc_ids_csv}&tsyms=USD"
+            resp_cc = requests.get(url_cc, timeout=5)
+            resp_cc.raise_for_status()
+            data_cc = resp_cc.json()
+            
+            raw_data = data_cc.get('RAW', {})
+            if not raw_data:
+                return f"Não foram encontrados dados ativos (Fallback) para as moedas: {final_ids_csv}"
+                
+            contexto_precos = "Dados REAIS atuais (via CryptoCompare):\n"
+            for coin_id, info in raw_data.items():
+                usd_info = info.get('USD', {})
+                preco = usd_info.get('PRICE', 0)
+                variacao = usd_info.get('CHANGEPCT24HOUR', 0)
+                vol = usd_info.get('VOLUME24HOURTO', 0)
+                
+                if vol >= 1_000_000_000:
+                    vol_str = f"${vol / 1_000_000_000:.2f}B"
+                elif vol >= 1_000_000:
+                    vol_str = f"${vol / 1_000_000:.2f}M"
+                else:
+                    vol_str = f"${vol:,.0f}"
+
+                # Mapeamento reverso para exibir nome amigável
+                REVERSE_NAME_MAP = {
+                    "SNX": "Synthetix (SNX)", "POL": "Polygon (POL)", "HYPE": "Hyperliquid (HYPE)",
+                    "AVAX": "Avalanche (AVAX)", "TON": "Toncoin (TON)", "WIF": "Dogwifhat (WIF)",
+                    "SHIB": "Shiba Inu (SHIB)", "INJ": "Injective (INJ)", "RNDR": "Render (RNDR)",
+                    "FET": "Fetch.ai (FET)", "AGIX": "SingularityNET (AGIX)"
+                }
+                display_name = REVERSE_NAME_MAP.get(coin_id, coin_id)
+                    
+                contexto_precos += f"- {display_name}: Preço ${preco:,.2f} | Variação 24h: {variacao:+.2f}% | Volume 24h: {vol_str}\n"
+                
+            return contexto_precos
+        except Exception as fallback_error:
+            logging.error(f"Erro no fallback CryptoCompare: {fallback_error}")
+            return "Ocorreu um erro nas fontes de dados (CoinGecko e Fallback). Informe ao usuário que os dados ao vivo estão indisponíveis no momento."
 
 @tool
 def get_defi_pools(chain_names_csv: str) -> str:
@@ -387,11 +431,6 @@ def get_defi_protocol_metrics(protocol_name: str) -> str:
     except Exception as e:
         logging.error(f"Erro ao buscar fundamentos do protocolo na Tool: {e}")
         return f"As métricas do protocolo {protocol_name} estão indisponíveis no momento pelo DefiLlama."
-        
-    except Exception as e:
-        logging.error(f"Erro ao gerar gráfico para {symbol}: {e}")
-        return f"Ocorreu um erro interno ao tentar desenhar o gráfico matemático de {symbol}."
-
 @tool
 def generate_crypto_chart(symbol: str) -> str:
     """
