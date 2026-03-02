@@ -1,7 +1,6 @@
 import requests
 import logging
 from langchain_core.tools import tool
-from langchain_community.tools import DuckDuckGoSearchResults
 import pandas as pd
 import matplotlib
 matplotlib.use('Agg')
@@ -594,13 +593,35 @@ def search_institutional_news(query: str) -> str:
         query: O termo de busca que o agente quer extrair opiniões institucionais (ex: "Bitcoin ETFs", "Ethereum network growth").
     """
     try:
+        if not query:
+            return "Consulta institucional vazia."
         busca_fechada = f"{query} site:theblock.co OR site:santiment.net"
-        pesquisa = DuckDuckGoSearchResults()
-        resultados = pesquisa.run(busca_fechada)
         
-        if resultados:
-            return f"Visão Institucional (The Block / Santiment): {resultados}"
-        return "Notícias institucionais indisponíveis por lentidão na interface."
+        url = "https://html.duckduckgo.com/html/"
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        data_payload = {"q": busca_fechada}
+        
+        response = requests.post(url, data=data_payload, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            html = response.text
+            snippets = []
+            partes = html.split('a class="result__snippet')
+            for p in partes[1:4]:
+                if 'href=' in p:
+                    ext = p.split('>', 1)[1].split('</a>', 1)[0]
+                    # Limpa as tags HTML do snippet de resultado
+                    texto_limpo = ext.replace('<b>', '').replace('</b>', '').strip()
+                    snippets.append(texto_limpo)
+                    
+            if snippets:
+                resultados = " | ".join(snippets)
+                return f"Visão Institucional (The Block / Santiment): {resultados}"
+            else:
+                return f"Sem resultados institucionais recentes para: {query}"
+        else:
+            return "Notícias institucionais indisponíveis por lentidão na interface."
+            
     except Exception as e:
         logging.error(f"Erro Institutional News Tool: {e}")
         return f"Falha na busca institucional para {query}."
