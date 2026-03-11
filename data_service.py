@@ -113,7 +113,20 @@ def get_crypto_data(coin_ids_csv: str) -> str:
         logging.warning(f"Erro ao buscar dados do CoinGecko na Tool: {e}. Tentando fallback CryptoCompare...")
         try:
             # Fallback CryptoCompare
-            cc_ids = [c.upper() for c in raw_ids if c]
+            CC_SYMBOL_MAP = {
+                "bitcoin": "BTC", "ethereum": "ETH", "solana": "SOL",
+                "hyperliquid": "HYPE", "polygon-ecosystem-token": "POL",
+                "binancecoin": "BNB", "arbitrum": "ARB", "optimism": "OP",
+                "the-open-network": "TON", "avalanche-2": "AVAX", "cardano": "ADA",
+                "polkadot": "DOT", "chainlink": "LINK", "dogecoin": "DOGE",
+                "shiba-inu": "SHIB", "pepe": "PEPE", "dogwifcoin": "WIF",
+                "render-token": "RNDR", "fetch-ai": "FET", "singularitynet": "AGIX",
+                "injective-protocol": "INJ", "bittensor": "TAO", "kaspa": "KAS",
+                "maker": "MKR", "aave": "AAVE", "uniswap": "UNI", "lido-dao": "LDO",
+                "ripple": "XRP", "havven": "SNX", "immutable-x": "IMX",
+                "polygon": "POL", "matic": "POL"
+            }
+            cc_ids = [CC_SYMBOL_MAP.get(c.lower(), c).upper() for c in raw_ids if c]
             if not cc_ids:
                 return "Erro: Nenhum ID válido para busca."
                 
